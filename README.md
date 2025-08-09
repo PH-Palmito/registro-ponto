@@ -1,50 +1,56 @@
-# Welcome to your Expo app 👋
+Registro de Ponto - README
+O que é
+Aplicativo simples para registro de ponto de funcionários, focado em marcar entradas e saídas de forma rápida e confiável.
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Funcionalidades
+Registrar entrada e saída com timestamp automático.
 
-## Get started
+Visualizar histórico de registros por dia, semana ou mês.
 
-1. Install dependencies
+Notificações simples para lembrar o usuário de bater ponto.
 
-   ```bash
-   npm install
-   ```
+Interface minimalista e fácil de usar.
 
-2. Start the app
+Tecnologias
+Frontend: React Native / React / outra que usar
 
-   ```bash
-   npx expo start
-   ```
+Backend: (se tiver) Node.js / Firebase / Supabase / etc
 
-In the output, you'll find options to open the app in a
+Banco de dados: SQLite / PostgreSQL / Firebase / Supabase / etc
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+Como usar
+Instale as dependências:
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+nginx
+Copiar
+Editar
+npm install
+Inicie o app:
 
-## Get a fresh project
+sql
+Copiar
+Editar
+npm start
+Registre pontos pelo botão de entrada e saída na tela principal.
 
-When you're ready, run:
+Consulte histórico para acompanhar suas marcações.
 
-```bash
-npm run reset-project
-```
+Estrutura do projeto
+/src - código fonte principal
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+/components - componentes reutilizáveis
 
-## Learn more
+/screens - telas do app
 
-To learn more about developing your project with Expo, look at the following resources:
+/services - comunicação com backend / API
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+/assets - imagens e estilos
 
-## Join the community
+Próximos passos
+Implementar autenticação de usuário.
 
-Join our community of developers creating universal apps.
+Relatórios exportáveis (PDF/CSV).
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Integração com sistemas de RH.
+
+Contato

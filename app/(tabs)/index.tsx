@@ -1,75 +1,137 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+type Registro = {
+  id: string;
+  entrada: string;
+  saida: string | null;
+  total?: string;
+};
 
-export default function HomeScreen() {
+export default function IndexScreen() {
+  const [registroAtual, setRegistroAtual] = useState<Registro | null>(null);
+
+  useEffect(() => {
+    carregarRegistroDoDia();
+  }, []);
+
+  const carregarRegistroDoDia = async () => {
+    try {
+      const dados = await AsyncStorage.getItem('registros');
+      if (dados) {
+        const registros: Registro[] = JSON.parse(dados);
+        const hoje = new Date().toDateString();
+        const encontrado = registros.find(r => new Date(r.entrada).toDateString() === hoje);
+        if (encontrado) {
+          setRegistroAtual(encontrado);
+        }
+      }
+    } catch (err) {
+      console.log('Erro ao carregar registro do dia:', err);
+    }
+  };
+
+  const salvarRegistro = async (novo: Registro) => {
+    try {
+      const dados = await AsyncStorage.getItem('registros');
+      let registros: Registro[] = dados ? JSON.parse(dados) : [];
+      const index = registros.findIndex(r => r.id === novo.id);
+      if (index >= 0) {
+        registros[index] = novo;
+      } else {
+        registros.unshift(novo);
+      }
+      await AsyncStorage.setItem('registros', JSON.stringify(registros));
+    } catch (err) {
+      console.log('Erro ao salvar registro:', err);
+    }
+  };
+
+  const calcularHoras = (entrada: string, saida: string) => {
+    const inicio = new Date(entrada);
+    const fim = new Date(saida);
+    const diffMs = fim.getTime() - inicio.getTime();
+    const diffHoras = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffMin = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    return `${diffHoras}h ${diffMin}min`;
+  };
+
+  const baterEntrada = () => {
+    const agora = new Date().toISOString();
+    const novoRegistro: Registro = {
+      id: Date.now().toString(),
+      entrada: agora,
+      saida: null,
+    };
+    setRegistroAtual(novoRegistro);
+    salvarRegistro(novoRegistro);
+  };
+
+  const baterSaida = () => {
+    if (!registroAtual) return;
+    const agora = new Date().toISOString();
+    const total = calcularHoras(registroAtual.entrada, agora);
+    const atualizado = { ...registroAtual, saida: agora, total };
+    setRegistroAtual(atualizado);
+    salvarRegistro(atualizado);
+  };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    <View style={styles.container}>
+      <Text style={styles.titulo}>Registro de Ponto</Text>
+
+      <TouchableOpacity
+        style={[
+          styles.btn,
+          registroAtual && !registroAtual.saida ? styles.btnSaida : styles.btnEntrada,
+        ]}
+        onPress={registroAtual && !registroAtual.saida ? baterSaida : baterEntrada}
+      >
+        <Text style={styles.btnTexto}>
+          {registroAtual && !registroAtual.saida ? 'Bater Saída' : 'Bater Entrada'}
+        </Text>
+      </TouchableOpacity>
+
+      {registroAtual && registroAtual.total && (
+        <Text style={styles.total}>Total hoje: {registroAtual.total}</Text>
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
+  container: {
+    flex: 1,
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+    padding: 20,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  titulo: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 40,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  btn: {
+    paddingVertical: 20,
+    paddingHorizontal: 40,
+    borderRadius: 8,
+  },
+  btnEntrada: {
+    backgroundColor: '#2927B4',
+  },
+  btnSaida: {
+    backgroundColor: '#B42727',
+  },
+  btnTexto: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  total: {
+    marginTop: 20,
+    fontSize: 18,
+    fontWeight: 'bold',
   },
 });

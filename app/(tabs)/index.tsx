@@ -6,6 +6,8 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 
+
+
 type BatidaTipo = 'entrada' | 'saida_almoco' | 'retorno_almoco' | 'saida_final';
 
 type Batida = {
@@ -208,7 +210,7 @@ export default function PontoScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 25, backgroundColor: '#fff', alignItems: 'center' },
-  titulo: { fontSize: 32, fontWeight: 'bold', marginBottom: 20, marginTop: 30, color: '#2927B4', textTransform: 'uppercase' },
+  titulo: { fontSize: 32, fontWeight: 'bold', marginBottom: 20, marginTop: 90, color: '#2927B4', textTransform: 'uppercase' },
   btn: { marginTop: 20, width: 300, height: 90, borderRadius: 50, justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
   btnTexto: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
   subtitulo: { fontSize: 20, fontWeight: 'bold', marginVertical: 10, alignSelf: 'flex-start' },

@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import * as Animatable from 'react-native-animatable';
+import { useIsFocused } from '@react-navigation/native';
 
 type BatidaTipo = 'entrada' | 'saida_almoco' | 'retorno_almoco' | 'saida_final';
 
@@ -20,33 +22,43 @@ export default function HistoricoScreen() {
   const [dias, setDias] = useState<Dia[]>([]);
   const [mesSelecionado, setMesSelecionado] = useState<string>('');
   const [mesesDisponiveis, setMesesDisponiveis] = useState<string[]>([]);
+  const [animacaoLista, setAnimacaoLista] = useState<'fadeInRight' | 'fadeInLeft'>('fadeInRight');
+  const [loading, setLoading] = useState(true);
+
+  const isFocused = useIsFocused();
 
   useEffect(() => {
-    (async () => {
-      const dados = await AsyncStorage.getItem('dias');
-      if (dados) {
-        const parsed: Dia[] = JSON.parse(dados);
+    if (isFocused) {
+      carregarDados();
+    }
+  }, [isFocused]);
 
-        const ordenados = parsed.sort((a, b) => (a.data < b.data ? 1 : -1));
-        setDias(ordenados);
+  const carregarDados = async () => {
+    setLoading(true);
+    const dados = await AsyncStorage.getItem('dias');
+    if (dados) {
+      const parsed: Dia[] = JSON.parse(dados);
 
-        const meses = Array.from(
-          new Set(
-            ordenados.map(d => {
-              const date = new Date(d.data);
-              return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-            })
-          )
-        );
+      const ordenados = parsed.sort((a, b) => (a.data < b.data ? 1 : -1));
+      setDias(ordenados);
 
-        setMesesDisponiveis(meses);
+      const meses = Array.from(
+        new Set(
+          ordenados.map(d => {
+            const date = new Date(d.data);
+            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+          })
+        )
+      );
 
-        const hoje = new Date();
-        const mesAtual = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
-        setMesSelecionado(mesAtual);
-      }
-    })();
-  }, []);
+      setMesesDisponiveis(meses);
+
+      const hoje = new Date();
+      const mesAtual = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
+      setMesSelecionado(mesAtual);
+    }
+    setLoading(false);
+  };
 
   const formatarMesAno = (mesAno: string) => {
     const [ano, mes] = mesAno.split('-');
@@ -104,29 +116,42 @@ export default function HistoricoScreen() {
     </View>
   );
 
+  const trocarMes = (direcao: 'anterior' | 'proximo') => {
+    const indiceAtual = mesesDisponiveis.indexOf(mesSelecionado);
+    const novoIndice = direcao === 'proximo' ? indiceAtual - 1 : indiceAtual + 1;
+    if (novoIndice >= 0 && novoIndice < mesesDisponiveis.length) {
+      setAnimacaoLista(direcao === 'proximo' ? 'fadeInRight' : 'fadeInLeft');
+      setMesSelecionado(mesesDisponiveis[novoIndice]);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.titulo}>Histórico</Text>
 
-      <View style={styles.mesesContainer}>
-        {mesesDisponiveis.map(mes => (
-          <TouchableOpacity
-            key={mes}
-            style={[styles.botaoMes, mesSelecionado === mes && styles.botaoMesAtivo]}
-            onPress={() => setMesSelecionado(mes)}
-          >
-            <Text style={mesSelecionado === mes ? styles.textoMesAtivo : styles.textoMes}>
-              {formatarMesAno(mes)}
-            </Text>
-          </TouchableOpacity>
-        ))}
+      <View style={styles.navMes}>
+        <TouchableOpacity onPress={() => trocarMes('anterior')}>
+          <Ionicons name="chevron-back" size={28} color="#2927B4" />
+        </TouchableOpacity>
+
+        <Text style={styles.mesTitulo}>{formatarMesAno(mesSelecionado)}</Text>
+
+        <TouchableOpacity onPress={() => trocarMes('proximo')}>
+          <Ionicons name="chevron-forward" size={28} color="#2927B4" />
+        </TouchableOpacity>
       </View>
 
-      <FlatList
-        data={diasDoMes}
-        keyExtractor={item => item.data}
-        renderItem={renderDia}
-      />
+      {loading ? (
+        <ActivityIndicator size="large" color="#2927B4" style={{ marginTop: 20 }} />
+      ) : (
+        <Animatable.View animation={animacaoLista} duration={400}>
+          <FlatList
+            data={diasDoMes}
+            keyExtractor={item => item.data}
+            renderItem={renderDia}
+          />
+        </Animatable.View>
+      )}
     </View>
   );
 }
@@ -134,11 +159,8 @@ export default function HistoricoScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, backgroundColor: '#fff' },
   titulo: { fontSize: 28, fontWeight: 'bold', marginBottom: 15 },
-  mesesContainer: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 10 },
-  botaoMes: { padding: 8, borderRadius: 5, backgroundColor: '#eee', marginRight: 5, marginBottom: 5 },
-  botaoMesAtivo: { backgroundColor: '#2927B4' },
-  textoMes: { color: '#000' },
-  textoMesAtivo: { color: '#fff', fontWeight: 'bold' },
+  navMes: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+  mesTitulo: { fontSize: 18, fontWeight: 'bold', color: '#2927B4' },
   card: { backgroundColor: '#f8f9fa', padding: 15, borderRadius: 8, marginBottom: 10, elevation: 2 },
   data: { fontSize: 18, fontWeight: 'bold', marginBottom: 5 },
   linhaBatida: { flexDirection: 'row', alignItems: 'center', marginBottom: 3 },

@@ -6,8 +6,6 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 
-
-
 type BatidaTipo = 'entrada' | 'saida_almoco' | 'retorno_almoco' | 'saida_final';
 
 type Batida = {
@@ -32,19 +30,35 @@ export default function PontoScreen() {
     carregarDados();
   }, []);
 
-  const hojeString = () => new Date().toISOString().slice(0, 10);
+  const hojeString = () => {
+    const d = new Date();
+    const ano = d.getFullYear();
+    const mes = String(d.getMonth() + 1).padStart(2, '0');
+    const dia = String(d.getDate()).padStart(2, '0');
+    return `${ano}-${mes}-${dia}`;
+  };
+
+  const horaLocalISO = () => {
+    const d = new Date();
+    const ano = d.getFullYear();
+    const mes = String(d.getMonth() + 1).padStart(2, '0');
+    const dia = String(d.getDate()).padStart(2, '0');
+    const horas = String(d.getHours()).padStart(2, '0');
+    const minutos = String(d.getMinutes()).padStart(2, '0');
+    const segundos = String(d.getSeconds()).padStart(2, '0');
+    return `${ano}-${mes}-${dia}T${horas}:${minutos}:${segundos}`;
+  };
 
   const carregarDados = async () => {
     try {
       const dados = await AsyncStorage.getItem('dias');
+      const hoje = hojeString();
       if (dados) {
         const parsed: Dia[] = JSON.parse(dados);
         setDias(parsed);
-        const hoje = hojeString();
         const dia = parsed.find(d => d.data === hoje) || { data: hoje, batidas: [] };
         setDiaAtual(dia);
       } else {
-        const hoje = hojeString();
         setDiaAtual({ data: hoje, batidas: [] });
       }
     } catch (e) {
@@ -67,7 +81,7 @@ export default function PontoScreen() {
   const ordemTipos: BatidaTipo[] = ['entrada', 'saida_almoco', 'retorno_almoco', 'saida_final'];
 
   const proxTipo = () => {
-    if (!diaAtual) return 'entrada' as BatidaTipo;
+    if (!diaAtual) return 'entrada';
     const batidasHoje = diaAtual.batidas.map(b => b.tipo);
     for (const tipo of ordemTipos) {
       if (!batidasHoje.includes(tipo)) return tipo;
@@ -85,14 +99,13 @@ export default function PontoScreen() {
     const novaBatida: Batida = {
       id: Date.now().toString(),
       tipo,
-      timestamp: new Date().toISOString().slice(0, 19),
+      timestamp: horaLocalISO(), // Agora salva hora local
     };
     const novoDia: Dia = {
       data: diaAtual.data,
       batidas: [...diaAtual.batidas, novaBatida],
     };
-    let novosDias = dias.filter(d => d.data !== diaAtual.data);
-    novosDias.unshift(novoDia);
+    const novosDias = [novoDia, ...dias.filter(d => d.data !== diaAtual.data)];
     salvarDados(novosDias);
   };
 
@@ -103,11 +116,14 @@ export default function PontoScreen() {
     const rAlmoco = getBatida('retorno_almoco');
     const sFinal = getBatida('saida_final');
     if (!e || !sAlmoco || !rAlmoco || !sFinal) return 0;
+
     const tEntrada = new Date(e.timestamp).getTime();
     const tSaidaAlmoco = new Date(sAlmoco.timestamp).getTime();
     const tRetornoAlmoco = new Date(rAlmoco.timestamp).getTime();
     const tSaidaFinal = new Date(sFinal.timestamp).getTime();
+
     if (tSaidaAlmoco < tEntrada || tRetornoAlmoco < tSaidaAlmoco || tSaidaFinal < tRetornoAlmoco) return 0;
+
     return (tSaidaFinal - tEntrada - (tRetornoAlmoco - tSaidaAlmoco)) / (1000 * 60 * 60);
   };
 
@@ -122,14 +138,17 @@ export default function PontoScreen() {
     const diaSemana = hoje.getDay() || 7;
     const inicioSemana = new Date(hoje);
     inicioSemana.setDate(hoje.getDate() - (diaSemana - 1));
+
     const diasSemana = dias.filter(d => {
-      const dData = new Date(d.data);
+      const dData = new Date(d.data + 'T00:00:00');
       return dData >= inicioSemana && dData <= hoje;
     });
+
     let totalHoras = 0;
     diasSemana.forEach(d => {
       totalHoras += calcularTotalHorasDia(d.batidas);
     });
+
     return totalHoras - 44;
   };
 
@@ -145,12 +164,11 @@ export default function PontoScreen() {
       Alert.alert('Erro', 'Hora inválida. Use formato HH:mm.');
       return;
     }
-    const novaTimestamp = diaAtual.data + 'T' + horaEdit + ':00';
+    const novaTimestamp = `${diaAtual.data}T${horaEdit}:00`; // mantém formato local
     const novaBatida: Batida = { ...batidaEditada, timestamp: novaTimestamp };
     const novasBatidas = diaAtual.batidas.map(b => b.id === novaBatida.id ? novaBatida : b);
     const novoDia: Dia = { ...diaAtual, batidas: novasBatidas };
-    let novosDias = dias.filter(d => d.data !== diaAtual.data);
-    novosDias.unshift(novoDia);
+    const novosDias = [novoDia, ...dias.filter(d => d.data !== diaAtual.data)];
     salvarDados(novosDias);
     setModalEdicaoAberto(false);
     setBatidaEditada(null);
@@ -166,11 +184,13 @@ export default function PontoScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.titulo}>Registro de Ponto</Text>
+
       <TouchableOpacity onPress={baterPonto} activeOpacity={0.8}>
         <LinearGradient colors={['#2927B4', '#12114E']} style={styles.btn}>
           <Text style={styles.btnTexto}>Bater Ponto ({proxTipo() || 'Completo'})</Text>
         </LinearGradient>
       </TouchableOpacity>
+
       <Text style={styles.subtitulo}>Batidas de hoje ({diaAtual?.data})</Text>
       <FlatList
         data={diaAtual?.batidas || []}
@@ -178,6 +198,7 @@ export default function PontoScreen() {
         renderItem={renderBatida}
         style={{ width: '100%' }}
       />
+
       <Text style={styles.total}>
         Total hoje: {formatarHoras(calcularTotalHorasDia(diaAtual?.batidas || []))}
       </Text>
@@ -220,3 +241,4 @@ const styles = StyleSheet.create({
   modalContent: { backgroundColor: '#fff', borderRadius: 10, padding: 20 },
   input: { borderWidth: 1, borderColor: '#999', borderRadius: 5, padding: 10, marginTop: 10, fontSize: 18, textAlign: 'center' },
 });
+  

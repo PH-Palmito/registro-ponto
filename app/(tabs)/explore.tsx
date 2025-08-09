@@ -65,19 +65,25 @@ export default function HistoricoScreen() {
     const sAlmoco = getBatida('saida_almoco');
     const rAlmoco = getBatida('retorno_almoco');
     const sFinal = getBatida('saida_final');
+
     if (!e || !sAlmoco || !rAlmoco || !sFinal) return 0;
+
     const tEntrada = new Date(e.timestamp).getTime();
     const tSaidaAlmoco = new Date(sAlmoco.timestamp).getTime();
     const tRetornoAlmoco = new Date(rAlmoco.timestamp).getTime();
     const tSaidaFinal = new Date(sFinal.timestamp).getTime();
+
     if (tSaidaAlmoco < tEntrada || tRetornoAlmoco < tSaidaAlmoco || tSaidaFinal < tRetornoAlmoco) return 0;
+
     return (tSaidaFinal - tEntrada - (tRetornoAlmoco - tSaidaAlmoco)) / (1000 * 60 * 60);
   };
 
   const formatarHoras = (horas: number) => {
-    const h = Math.floor(horas);
-    const m = Math.round((horas - h) * 60);
-    return `${h}h ${m}min`;
+    const negativo = horas < 0;
+    const horasAbs = Math.abs(horas);
+    const h = Math.floor(horasAbs);
+    const m = Math.round((horasAbs - h) * 60);
+    return `${negativo ? '-' : ''}${h}h ${m}min`;
   };
 
   const icones: Record<BatidaTipo, { nome: keyof typeof Ionicons.glyphMap; cor: string }> = {
@@ -99,6 +105,12 @@ export default function HistoricoScreen() {
 
   const diasTrabalhadosMes = () => {
     return diasDoMes.filter(dia => calcularTotalHorasDia(dia.batidas) > 0).length;
+  };
+
+  const saldoSemanal = () => {
+    const totalHoras = totalHorasMes();
+    const cargaHorariaSemanal = 44; // ajuste conforme necessário
+    return totalHoras - cargaHorariaSemanal;
   };
 
   const renderDia = ({ item }: { item: Dia }) => (
@@ -133,6 +145,7 @@ export default function HistoricoScreen() {
         <Text style={styles.resumoTexto}>
           {formatarMesAno(mesSelecionado)} • {diasTrabalhadosMes()} dias
           {"\n"}Total: {formatarHoras(totalHorasMes())}
+          {"\n"}Saldo: {formatarHoras(saldoSemanal())}
         </Text>
       </View>
 

@@ -1,19 +1,31 @@
-# Registro de Ponto - README
+# App de Registro de Ponto
 
-## O que é  
-Aplicativo simples para registro de ponto de funcionários, focado em marcar entradas e saídas de forma rápida e confiável.
+Aplicativo mobile em React Native para registro de ponto diário, cálculo de horas trabalhadas, saldo semanal e mensal, e edição de batidas anteriores.
 
-## Funcionalidades  
-- Registrar entrada e saída com timestamp automático  
-- Visualizar histórico de registros por dia, semana ou mês  
-- Notificações simples para lembrar o usuário de bater ponto  
-- Interface minimalista e fácil de usar  
+---
 
-## Tecnologias  
-- Frontend: React Native 
+## Funcionalidades
 
+- Registro de ponto com os tipos:
+  - Entrada
+  - Saída para almoço
+  - Retorno do almoço
+  - Saída final
+- Histórico diário com total de horas trabalhadas.
+- Resumo mensal e semanal com saldo de horas.
+- Navegação entre meses.
+- Edição de batidas anteriores diretamente no histórico.
+- Armazenamento local usando `AsyncStorage`.
 
-## Como usar  
-1. Instale as dependências:  
-   ```bash
-   npm install
+---
+
+## Tecnologias Utilizadas
+
+- React Native
+- Expo
+- TypeScript
+- AsyncStorage (`@react-native-async-storage/async-storage`)
+- React Native Animatable
+- Ionicons
+
+---

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, Modal, TextInput, Button, ScrollView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import * as Animatable from 'react-native-animatable';
@@ -23,12 +23,14 @@ export default function HistoricoScreen() {
   const [mesesDisponiveis, setMesesDisponiveis] = useState<string[]>([]);
   const [animacaoLista, setAnimacaoLista] = useState<'fadeInRight' | 'fadeInLeft'>('fadeInRight');
 
+  const [modalVisivel, setModalVisivel] = useState(false);
+  const [diaSelecionado, setDiaSelecionado] = useState<Dia | null>(null);
+
   useEffect(() => {
     (async () => {
       const dados = await AsyncStorage.getItem('dias');
       if (dados) {
         const parsed: Dia[] = JSON.parse(dados);
-
         const ordenados = parsed.sort((a, b) => (a.data < b.data ? 1 : -1));
         setDias(ordenados);
 
@@ -40,7 +42,6 @@ export default function HistoricoScreen() {
             })
           )
         );
-
         setMesesDisponiveis(meses);
 
         const hoje = new Date();
@@ -99,18 +100,53 @@ export default function HistoricoScreen() {
     return mesAno === mesSelecionado;
   });
 
-  const totalHorasMes = () => {
-    return diasDoMes.reduce((acc, dia) => acc + calcularTotalHorasDia(dia.batidas), 0);
-  };
+  const totalHorasMes = () => diasDoMes.reduce((acc, dia) => acc + calcularTotalHorasDia(dia.batidas), 0);
+  const diasTrabalhadosMes = () => diasDoMes.filter(dia => calcularTotalHorasDia(dia.batidas) > 0).length;
 
-  const diasTrabalhadosMes = () => {
-    return diasDoMes.filter(dia => calcularTotalHorasDia(dia.batidas) > 0).length;
+  const saldoMensal = () => {
+    const totalHoras = totalHorasMes();
+    const cargaHorariaSemanal = 44;
+    const semanasNoMes = diasTrabalhadosMes() / 5; // aproximado
+    return totalHoras - cargaHorariaSemanal * semanasNoMes;
   };
 
   const saldoSemanal = () => {
-    const totalHoras = totalHorasMes();
-    const cargaHorariaSemanal = 44; // ajuste conforme necessário
-    return totalHoras - cargaHorariaSemanal;
+    const hoje = new Date();
+    const primeiroDiaSemana = new Date(hoje);
+    const diaSemana = hoje.getDay();
+    const segunda = diaSemana === 0 ? -6 : 1 - diaSemana;
+    primeiroDiaSemana.setDate(hoje.getDate() + segunda);
+    primeiroDiaSemana.setHours(0, 0, 0, 0);
+
+    const ultimoDiaSemana = new Date(primeiroDiaSemana);
+    ultimoDiaSemana.setDate(primeiroDiaSemana.getDate() + 6);
+    ultimoDiaSemana.setHours(23, 59, 59, 999);
+
+    const diasSemanaAtual = dias.filter(dia => {
+      const dataDia = new Date(dia.data);
+      return dataDia >= primeiroDiaSemana && dataDia <= ultimoDiaSemana;
+    });
+
+    const totalHorasSemana = diasSemanaAtual.reduce(
+      (acc, dia) => acc + calcularTotalHorasDia(dia.batidas),
+      0
+    );
+
+    const cargaHorariaSemanal = 44;
+    return totalHorasSemana - cargaHorariaSemanal;
+  };
+
+  const abrirEdicao = (dia: Dia) => {
+    setDiaSelecionado(dia);
+    setModalVisivel(true);
+  };
+
+  const salvarEdicao = async () => {
+    if (!diaSelecionado) return;
+    const diasAtualizados = dias.map(d => d.data === diaSelecionado.data ? diaSelecionado : d);
+    setDias(diasAtualizados);
+    await AsyncStorage.setItem('dias', JSON.stringify(diasAtualizados));
+    setModalVisivel(false);
   };
 
   const renderDia = ({ item }: { item: Dia }) => (
@@ -123,6 +159,9 @@ export default function HistoricoScreen() {
         </View>
       ))}
       <Text style={styles.total}>⏱ Total: {formatarHoras(calcularTotalHorasDia(item.batidas))}</Text>
+      <TouchableOpacity style={styles.btnEditar} onPress={() => abrirEdicao(item)}>
+        <Text style={{ color: '#fff', fontWeight: 'bold' }}>Editar</Text>
+      </TouchableOpacity>
     </View>
   );
 
@@ -139,13 +178,14 @@ export default function HistoricoScreen() {
     <View style={styles.container}>
       <Text style={styles.titulo}>Histórico</Text>
 
-      {/* Resumo Mensal */}
+      {/* Resumo Mensal/Semanal */}
       <View style={styles.resumoBox}>
         <Ionicons name="calendar" size={24} color="#fff" style={{ marginRight: 8 }} />
         <Text style={styles.resumoTexto}>
           {formatarMesAno(mesSelecionado)} • {diasTrabalhadosMes()} dias
-          {"\n"}Total: {formatarHoras(totalHorasMes())}
-          {"\n"}Saldo: {formatarHoras(saldoSemanal())}
+          {"\n"}Total mês: {formatarHoras(totalHorasMes())}
+          {"\n"}Saldo mensal: {formatarHoras(saldoMensal())}
+          {"\n"}Saldo semanal: {formatarHoras(saldoSemanal())}
         </Text>
       </View>
 
@@ -168,19 +208,126 @@ export default function HistoricoScreen() {
           renderItem={renderDia}
         />
       </Animatable.View>
+
+      {/* Modal de edição */}
+      <Modal visible={modalVisivel} animationType="slide" transparent>
+        <View style={styles.modalBackground}>
+          <View style={styles.modalContainer}>
+            <ScrollView>
+              {diaSelecionado?.batidas.map((b, index) => (
+                <View key={b.id} style={{ marginBottom: 15 }}>
+                  <Text>{b.tipo.replace('_', ' ').toUpperCase()}</Text>
+                  <TextInput
+                    value={b.timestamp.slice(11, 16)}
+                    onChangeText={text => {
+                      const horas = text.split(':');
+                      if (horas.length === 2 && diaSelecionado) {
+                        const novaData = new Date(diaSelecionado.data);
+                        novaData.setHours(parseInt(horas[0]), parseInt(horas[1]));
+                        const novasBatidas = [...diaSelecionado.batidas];
+                        novasBatidas[index] = { ...b, timestamp: novaData.toISOString() };
+                        setDiaSelecionado({ ...diaSelecionado, batidas: novasBatidas });
+                      }
+                    }}
+                    keyboardType="numeric"
+                    style={styles.input}
+                  />
+                </View>
+              ))}
+              <Button title="Salvar" onPress={salvarEdicao} />
+              <Button title="Cancelar" onPress={() => setModalVisivel(false)} color="red" />
+                
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#fff' },
-  titulo: { fontSize: 28, fontWeight: 'bold', marginBottom: 15 },
-  resumoBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#2927B4', padding: 12, borderRadius: 8, marginBottom: 15 },
-  resumoTexto: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
-  navegacaoMes: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 15 },
-  mesSelecionado: { fontSize: 18, fontWeight: 'bold', color: '#2927B4', marginHorizontal: 10 },
-  card: { backgroundColor: '#f8f9fa', padding: 15, borderRadius: 8, marginBottom: 10, elevation: 2 },
-  data: { fontSize: 18, fontWeight: 'bold', marginBottom: 5 },
-  linhaBatida: { flexDirection: 'row', alignItems: 'center', marginBottom: 3 },
-  total: { marginTop: 8, fontWeight: 'bold', color: '#2c3e50' }
+  container: { flex: 1,
+    padding: 20,
+    backgroundColor: '#fff'
+  },
+  titulo: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    marginBottom: 15
+  },
+  resumoBox:{
+     flexDirection: 'row'
+     , alignItems: 'center',
+      backgroundColor: '#2927B4',
+       padding: 12,
+       borderRadius: 8,
+        marginBottom: 15
+      },
+  resumoTexto: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold'
+  },
+  navegacaoMes: {
+    flexDirection: 'row',
+     alignItems: 'center',
+      justifyContent: 'center',
+       marginBottom: 15
+      },
+  mesSelecionado: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2927B4',
+    marginHorizontal: 10
+  },
+  card: {
+    backgroundColor:'#f8f9fa',
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 10,
+    elevation: 2
+  },
+  data: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 5
+  },
+  linhaBatida: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 3
+  },
+  total: {
+    marginTop: 8,
+    fontWeight: 'bold',
+    color: '#2c3e50'
+    },
+  modalBackground: {
+   flex: 1,
+   backgroundColor: 'rgba(0,0,0,0.5)',
+   justifyContent: 'center',
+   alignItems: 'center'
+},
+modalContainer: {
+  width: '90%',
+  backgroundColor: '#fff',
+  borderRadius: 8,
+  padding: 20,
+  maxHeight: '80%'
+},
+input: {
+  borderWidth: 1,
+  borderColor: '#ccc',
+  borderRadius: 5,
+  padding: 8,
+  marginTop: 5
+},
+btnEditar: {
+  marginTop: 10,
+  backgroundColor: '#2927B4',
+  padding: 8,
+  borderRadius: 5,
+  alignItems: 'center'
+}
+
 });

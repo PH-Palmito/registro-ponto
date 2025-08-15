@@ -5,6 +5,18 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Notifications from 'expo-notifications';
+
+// Configuração global das notificações
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true, // iOS 16+
+    shouldShowList: true,   // iOS 16+
+  }),
+});
 
 type BatidaTipo = 'entrada' | 'saida_almoco' | 'retorno_almoco' | 'saida_final';
 
@@ -27,8 +39,16 @@ export default function PontoScreen() {
   const [horaEdit, setHoraEdit] = useState('');
 
   useEffect(() => {
+    pedirPermissaoNotificacao();
     carregarDados();
   }, []);
+
+  const pedirPermissaoNotificacao = async () => {
+    const { status } = await Notifications.requestPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permissão negada', 'Não será possível enviar notificações.');
+    }
+  };
 
   const hojeString = () => {
     const d = new Date();
@@ -89,7 +109,7 @@ export default function PontoScreen() {
     return null;
   };
 
-  const baterPonto = () => {
+  const baterPonto = async () => {
     if (!diaAtual) return;
     const tipo = proxTipo();
     if (!tipo) {
@@ -99,7 +119,7 @@ export default function PontoScreen() {
     const novaBatida: Batida = {
       id: Date.now().toString(),
       tipo,
-      timestamp: horaLocalISO(), // Agora salva hora local
+      timestamp: horaLocalISO(),
     };
     const novoDia: Dia = {
       data: diaAtual.data,
@@ -107,6 +127,22 @@ export default function PontoScreen() {
     };
     const novosDias = [novoDia, ...dias.filter(d => d.data !== diaAtual.data)];
     salvarDados(novosDias);
+
+    // Se for saída para almoço, agenda notificação para 50 minutos depois
+    if (tipo === 'saida_almoco') {
+await Notifications.scheduleNotificationAsync({
+  content: {
+    title: 'Hora de voltar!',
+    body: 'Seu intervalo de almoço acabou. Retorne ao trabalho.',
+    sound: true,
+  },
+  trigger: {
+    type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+    seconds: 50 * 60,
+    repeats: false,
+  },
+});
+    }
   };
 
   const calcularTotalHorasDia = (batidas: Batida[]): number => {
@@ -164,7 +200,7 @@ export default function PontoScreen() {
       Alert.alert('Erro', 'Hora inválida. Use formato HH:mm.');
       return;
     }
-    const novaTimestamp = `${diaAtual.data}T${horaEdit}:00`; // mantém formato local
+    const novaTimestamp = `${diaAtual.data}T${horaEdit}:00`;
     const novaBatida: Batida = { ...batidaEditada, timestamp: novaTimestamp };
     const novasBatidas = diaAtual.batidas.map(b => b.id === novaBatida.id ? novaBatida : b);
     const novoDia: Dia = { ...diaAtual, batidas: novasBatidas };
@@ -241,4 +277,3 @@ const styles = StyleSheet.create({
   modalContent: { backgroundColor: '#fff', borderRadius: 10, padding: 20 },
   input: { borderWidth: 1, borderColor: '#999', borderRadius: 5, padding: 10, marginTop: 10, fontSize: 18, textAlign: 'center' },
 });
-  

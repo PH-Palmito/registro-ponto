@@ -1,50 +1,63 @@
-# Welcome to your Expo app 👋
+# ⏱ App de Registro de Ponto
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Aplicativo mobile em React Native para **registro de ponto diário**, cálculo de **horas trabalhadas**, saldo **semanal e mensal**, e **edição de batidas anteriores**.
 
-## Get started
+---
 
-1. Install dependencies
+## 🚀 Funcionalidades
 
-   ```bash
-   npm install
-   ```
+- ✅ Registro de ponto com os tipos:
+  - 🟢 Entrada
+  - 🍔 Saída para almoço
+  - 🔄 Retorno do almoço
+  - 🔴 Saída final
+- 📅 Histórico diário com total de horas trabalhadas.
+- 📊 Resumo mensal e semanal com saldo de horas.
+- ⬅️➡️ Navegação entre meses.
+- ✏️ Edição de batidas anteriores diretamente no histórico.
+- 💾 Armazenamento local usando `AsyncStorage`.
 
-2. Start the app
+---
 
-   ```bash
-   npx expo start
-   ```
+## 🛠 Tecnologias Utilizadas
 
-In the output, you'll find options to open the app in a
+- React Native
+- Expo
+- TypeScript
+- AsyncStorage (`@react-native-async-storage/async-storage`)
+- React Native Animatable
+- Ionicons
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+---
+🗂 Estrutura do Projeto
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+- app/(tabs)/HistoricoScreen.tsx – Tela principal de histórico e edição de batidas.
+- AsyncStorage – Armazenamento local das batidas.
+- components/ – Componentes reutilizáveis (botões, cards, inputs, etc.).
+  
+---
+📌 Como Usar
 
-## Get a fresh project
+- Abra o app e registre suas batidas diárias.
+- Navegue pelo histórico para conferir total de horas e saldo semanal/mensal.
+- Toque em “Editar” em qualquer dia para corrigir ou ajustar horários.
+- As alterações são salvas localmente e refletidas no histórico imediatamente.
+---
 
-When you're ready, run:
+⚠️ Observações
 
+-A carga horária semanal padrão é 44h, mas pode ser ajustada no código.
+- O cálculo de saldo semanal considera apenas a semana atual.
+- O cálculo de saldo mensal considera uma média de 5 dias por semana.
+ ---
+## ⚡ Instalação
+
+1. Clone o repositório:
 ```bash
-npm run reset-project
-```
+git clone
+cd registro-ponto
+npm install
+# ou
+yarn install
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
 
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
